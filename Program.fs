@@ -3,7 +3,7 @@
 open System
 
 module OhTomaton =
-    type DFA<'Q, 'A when 'Q: equality> (q: List<'Q>, sigma: List<'A>, delta: 'Q -> 'A -> Option<'Q>, q0: 'Q, f: List<'Q>) =
+    type DFA<'Q, 'A when 'Q: equality> (delta: 'Q -> 'A -> Option<'Q>, q0: 'Q, f: List<'Q>) =
         member this.ReadAlphabet a = 
             match delta q0 a with
                 | Some(S) -> S
@@ -30,7 +30,7 @@ module OhTomaton =
         member this.IsAccept str =
             List.contains (this.ReadAlphabetList str) f
 
-    and NFA<'Q, 'A when 'Q: equality and 'A: equality> (q: List<'Q>, sigma: List<'A>, delta: List<'Q*Option<'A>*'Q>, q0: 'Q, f: List<'Q>) =
+    type NFA<'Q, 'A when 'Q: equality and 'A: equality> (delta: List<'Q*Option<'A>*'Q>, q0: 'Q, f: List<'Q>) =
         member this.ReadAlphabetList str =
             let rec apply str q =
                 // printfn "running: %A %A" q str  // Debug print
@@ -150,9 +150,9 @@ module OhTomaton =
 
     let F = [State.S7]
 
-    // let Dfa = DFA(Q, Sigma, transition, State.S0, F)
+    // let Dfa = DFA(transition, State.S0, F)
 
-    let Nfa = NFA(Q, Sigma, transitionList, State.S0, F)
+    let Nfa = NFA(transitionList, State.S0, F)
 
     let s = "ababaaabbb"
     s |> Alphabet.FromString
