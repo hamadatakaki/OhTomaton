@@ -1,21 +1,23 @@
 namespace DFA
 
-type DFA<'Q, 'A when 'Q: equality and 'A: equality> (delta: List<'Q*'A*'Q>, q0: 'Q, f: List<'Q>) =
-    member this.ReadAlphabetList str = 
+type DFA<'Q, 'A when 'Q : comparison and 'A : comparison> (delta: Set<'Q*'A*'Q>, s: 'Q, f: Set<'Q>) =
+    member this.ReadAlphabetSeq (str: List<'A>) = 
         let applyAlphabet a q =
-            let condition q a (q0, a1, _) = (q = q0) && (a = a1)
-            List.filter (condition q a) delta
-            |> List.map (fun (_, _, x) -> x)
-        let rec apply s q = 
-            match s with
+            let condition (q0, a1, _) = (q = q0) && (a = a1)
+            Set.filter condition delta
+            |> Set.map (fun (_, _, x) -> x)
+
+        let rec apply (alpha: List<'A>) (qs: Set<'Q>) = 
+            match alpha with
                 | head :: tail -> 
-                    List.map (applyAlphabet head) q
-                    |> List.fold List.append [] 
+                    Set.map (applyAlphabet head) qs
+                    |> Set.unionMany
                     |> apply tail
-                | [] -> q
-        apply str [q0] 
+                | [] -> qs
+
+        apply str (set[s])
 
     member this.IsAccept str =
-        this.ReadAlphabetList str 
-        |> List.map (fun x -> List.contains x f)
-        |> List.contains true
+        this.ReadAlphabetSeq str 
+        |> Set.map (fun x -> Set.contains x f)
+        |> Set.contains true

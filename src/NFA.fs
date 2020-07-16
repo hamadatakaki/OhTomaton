@@ -1,29 +1,48 @@
 namespace NFA
 open DFA
 
-type NFA<'Q, 'A when 'Q: equality and 'A: equality> (delta: List<'Q*Option<'A>*'Q>, q0: 'Q, f: List<'Q>) =
-    member this.ReadAlphabetList str =
-        let applyAlphabet a q =
-            let condition q a (q0, a1, _) =
+type NFA<'Q, 'A when 'Q : comparison and 'A : comparison> (delta: Set<'Q*Option<'A>*'Q>, s: 'Q, f: Set<'Q>) =
+    let rec epsilonSkip (qs: Set<'Q>) =
+        let unitEpsilonTrans (q: 'Q) =
+            let cond (q0, a1, _) = (q0 = q) && (a1 = None)
+            Set.filter cond delta
+            |> Set.map (fun (_, _, x) -> x)
+
+        if Set.isEmpty qs then
+            qs
+        else
+            Set.map unitEpsilonTrans qs
+            |> Set.unionMany
+            |> epsilonSkip
+            |> Set.union qs
+
+    let firstEpsilonTrans (q: 'Q) = set[q] |> epsilonSkip
+
+    // \cup_{x \in Q} T(x, a)
+    let alphabetTrans (a: 'A) (qs: Set<'Q>) =
+        let unitTrans (a: 'A) (q: 'Q) =
+            let condition (q0, a1, _) =
                 match a1 with
                     | Some(x) -> (q = q0) && (a = x)
                     | None -> q = q0
-            List.filter (condition q a) delta
-            |> List.map (fun (_, _, x) -> x)
-        let rec apply s q =
-            // printfn "running: %A %A" q str  // Debug print
-            match s with
+            Set.filter condition delta
+            |> Set.map (fun (_, _, x) -> x)
+
+        Set.map (unitTrans a) qs
+        |> Set.unionMany
+        |> epsilonSkip
+
+    member this.ReadAlphabetSeq (str: List<'A>) =
+        let rec apply (alpha: List<'A>) (qs: Set<'Q>) =
+            match alpha with
                 | head :: tail ->
-                    List.map (applyAlphabet head) q
-                    |> List.fold List.append [] 
+                    alphabetTrans head qs
                     |> apply tail
-                | [] -> q
-        apply str [q0]
+                | [] -> qs
+
+        firstEpsilonTrans s |> apply str 
 
     member this.IsAccept str =
-        this.ReadAlphabetList str 
-        |> List.map (fun x -> List.contains x f)
-        |> List.contains true
-
-let NFAtoDFA<'Q, 'A when 'Q: (member NewState<'T> : 'T -> 'Q<'T>)> nfa =
-    
+        this.ReadAlphabetSeq str 
+        |> Set.map (fun x -> Set.contains x f)
+        |> Set.contains true
