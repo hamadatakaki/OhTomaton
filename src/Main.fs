@@ -42,13 +42,13 @@ module Main =
         |> Token.FromAlphabetSeq
         |> Parser
 
-    let (Nfa2, _) = regexParser.Expr.ToNFA(0)
+    let Nfa2 = regexParser.ToNFA
     [for c in s -> c]
     |> Nfa2.IsAccept
-    |> printfn "NFA: Is '%s' accept?:  %b" s
+    |> printfn "NFA from RE: Is '%s' accept?:  %b" s
 
     let Dfa2 = Nfa2.ConvertToDFA
 
     [for c in s -> c]
     |> Dfa.IsAccept
-    |> printfn "DFA: Is '%s' accept?:  %b" s
+    |> printfn "DFA from RE: Is '%s' accept?:  %b" s
