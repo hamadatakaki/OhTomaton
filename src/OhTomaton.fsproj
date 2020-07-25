@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="DFA.fs" />
     <Compile Include="NFA.fs" />
+    <Compile Include="RE.fs" />
     <Compile Include="Main.fs" />
   </ItemGroup>
 </Project>

@@ -3,6 +3,7 @@
 namespace OhTomaton
 
 open NFA
+open RE
 
 module Main =
     let transitionSet = set [
@@ -35,3 +36,11 @@ module Main =
     [for c in s -> c]
     |> Dfa.IsAccept
     |> printfn "DFA: Is '%s' accept?:  %b" s
+
+    let regexParser = 
+        [for c in "a(b|c)*" -> c]
+        |> Token.FromAlphabetSeq
+        |> Parser
+
+    regexParser.Expr
+    |> printfn "%A"
