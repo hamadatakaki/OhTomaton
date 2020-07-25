@@ -4,6 +4,32 @@ open NFA
 
 module RE =
     type NFA = NFA<int, char>
+    type NT = NT<int, char>
+    exception SyntaxException of string
+
+    let nfaFromChar (c: char) (s: int) =
+        let delta = set[(s, Some(c), s+1)]
+        NFA(delta, s, set[s+1])
+
+    let nfaFromEpsilon (s: int) =
+        let delta = set[(s, None, s+1)]
+        NFA(delta, s, set[s+1])
+
+    let nfaFromUnion (s: int) (nfa1: NFA) (nfa2: NFA) =
+        let delta =
+            set[(s, None, nfa1.S0); (s, None, nfa2.S0)]
+            |> Set.union (Set.map (fun f -> (f, None, s+1)) nfa1.F)
+            |> Set.union (Set.map (fun f -> (f, None, s+1)) nfa2.F)
+            |> Set.union nfa1.Delta
+            |> Set.union nfa2.Delta
+        NFA(delta, s, set[s+1])
+
+    let nfaFromStar (s: int) (nfa: NFA) =
+        let delta =
+            set[(s, None, nfa.S0); (nfa.S0, None, s+1)]
+            |> Set.union (Set.map (fun f -> (f, None, nfa.S0)) nfa.F)
+            |> Set.union nfa.Delta
+        NFA(delta, s, set[s+1])
 
     type Token =
         | Character of char
@@ -11,7 +37,7 @@ module RE =
         | RParen
         | Union
         | Star
-        | EOF
+        | Dollar
 
         static member FromAlphabet (c: char): Token =
             match c with
@@ -23,17 +49,33 @@ module RE =
 
         static member FromAlphabetSeq (str: List<char>): List<Token> =
             let seq = List.map Token.FromAlphabet str
-            seq @ [EOF]
+            seq @ [Dollar]
+
 
     type Node =
         | Character of char
-        | EOF
+        | Dollar
         | Epsilon
         | Concat of (Node * Node)
         | Union of (Node * Node)
         | Star of Node
 
-    exception SyntaxException of string
+        member this.ToNFA (state: int) =
+            match this with
+                | Character(c) -> (nfaFromChar c state, state+2)
+                | Epsilon -> (nfaFromEpsilon state, state+2)
+                | Concat(r1, r2) ->
+                    let (nfa1, newState) = r1.ToNFA(state)
+                    let (nfa2, newState) = r2.ToNFA(newState)
+                    (nfa1+nfa2, newState+2)
+                | Union(r1, r2) ->
+                    let (nfa1, newState) = r1.ToNFA(state)
+                    let (nfa2, newState) = r2.ToNFA(newState)
+                    (nfaFromUnion newState nfa1 nfa2, newState+2)
+                | Star(r) ->
+                    let (nfa, newState) = r.ToNFA(state)
+                    (nfaFromStar newState nfa, newState+2)
+                | Dollar -> raise (SyntaxException("@ Sequence : the Sequence has unnecessary Star."))
 
     type Parser (tokens: List<Token>) =
         let mutable look = 0
@@ -46,8 +88,8 @@ module RE =
 
         member this.Expr =
             let union = this.Union
-            assert (this.Check(Token.EOF))
-            Concat(union, EOF)
+            assert (this.Check(Token.Dollar))
+            union
 
         member this.Union =
             let sequence = this.Sequence
@@ -73,8 +115,8 @@ module RE =
                         star
                     else
                         Concat(star, sequence)
-                | Token.EOF | Token.RParen | Token.Union -> Epsilon
-                | _ -> raise (SyntaxException("hoge"))
+                | Token.Dollar | Token.RParen | Token.Union -> Epsilon
+                | _ -> raise (SyntaxException("@ Sequence : the Sequence has unnecessary Star."))
 
         member this.Star =
             let factor = this.Factor
@@ -96,5 +138,5 @@ module RE =
                     | Token.Character(c) -> 
                         node <- Character(c)
                         this.Forward
-                    | _ -> raise (SyntaxException("hoge"))
+                    | _ -> raise (SyntaxException("@ Factor : the Factor doesn't start with '(' and is not Character."))
             node

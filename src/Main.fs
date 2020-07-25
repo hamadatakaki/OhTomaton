@@ -38,9 +38,17 @@ module Main =
     |> printfn "DFA: Is '%s' accept?:  %b" s
 
     let regexParser = 
-        [for c in "a(b|c)*" -> c]
+        [for c in "(a|b)*ab" -> c]
         |> Token.FromAlphabetSeq
         |> Parser
 
-    regexParser.Expr
-    |> printfn "%A"
+    let (Nfa2, _) = regexParser.Expr.ToNFA(0)
+    [for c in s -> c]
+    |> Nfa2.IsAccept
+    |> printfn "NFA: Is '%s' accept?:  %b" s
+
+    let Dfa2 = Nfa2.ConvertToDFA
+
+    [for c in s -> c]
+    |> Dfa.IsAccept
+    |> printfn "DFA: Is '%s' accept?:  %b" s

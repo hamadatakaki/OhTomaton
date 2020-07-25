@@ -39,6 +39,10 @@ module NFA =
         let calcTransition (a: 'A) (qs: Set<'Q>) =
             (qs, a, alphabetTrans a qs)
 
+        member this.Delta = delta
+        member this.S0 = s
+        member this.F = f
+
         member this.ReadAlphabetSeq (str: List<'A>) =
             let rec apply (alpha: List<'A>) (qs: Set<'Q>) =
                 match alpha with
@@ -61,7 +65,7 @@ module NFA =
                     | None -> set[]
             Set.map (fun (_, a, _) -> optionToSet a) delta |> Set.unionMany
 
-        member this.ConvertToDFA : DFA.DFA<Set<'Q>, 'A> =
+        member this.ConvertToDFA : DFA<Set<'Q>, 'A> =
             let q0 = firstEpsilonTrans s
             let mutable investigated = set[]
             let rec calcDelta (qs: Set<'Q>): Set<DT<Set<'Q>, 'A>> =
@@ -79,6 +83,12 @@ module NFA =
             let newF =
                 Set.map (fun x -> Set.filter (fun y -> Set.contains x y) investigated) f
                 |> Set.unionMany
-            DFA.DFA(newDelta, q0, newF)
+            DFA(newDelta, q0, newF)
+
+        static member (+) (nfa1: NFA<'Q, 'A>, nfa2: NFA<'Q, 'A>) =
+            let newDelta =
+                Set.union nfa1.Delta nfa2.Delta
+                |> Set.union (Set.map (fun x -> (x, None, nfa2.S0)) nfa1.F)
+            NFA<'Q, 'A>(newDelta, nfa1.S0, nfa2.F)
 
         override this.ToString() = sprintf "<%A, %A, %A>" delta s f
