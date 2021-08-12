@@ -26,19 +26,10 @@ module Main =
 
     let Nfa = NFA<int, char>(transitionSet, 0, F)
 
-    let s = "aaaabbbbbbabaabababababbababbbbbaaab"
-    [for c in s -> c]
-    |> Nfa.IsAccept
-    |> printfn "NFA: Is '%s' accept?:  %b" s
-
-    let Dfa = Nfa.ConvertToDFA
-
-    [for c in s -> c]
-    |> Dfa.IsAccept
-    |> printfn "DFA: Is '%s' accept?:  %b" s
+    let s = "abc"
 
     let regexParser = 
-        [for c in "(a|b)*ab" -> c]
+        [for c in "(a|b|c|(ab)*)*abc*" -> c]
         |> Token.FromAlphabetSeq
         |> Parser
 
@@ -50,5 +41,5 @@ module Main =
     let Dfa2 = Nfa2.ConvertToDFA
 
     [for c in s -> c]
-    |> Dfa.IsAccept
+    |> Dfa2.IsAccept
     |> printfn "DFA from RE: Is '%s' accept?:  %b" s
